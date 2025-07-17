@@ -1,0 +1,10 @@
+{
+  "icon": "mongodb.svg",
+  "ui": {
+    "dashboard-tab": {
+      "title": "Mongodb Atlas Local",
+      "src": "index.html",
+      "root": "ui"
+    }
+  }
+}
