@@ -104,6 +104,44 @@ To remove the extension:
 docker extension rm fcmenezes87/mongodb_atlas_local_extension:latest
 ```
 
+## CI/CD with GitHub Actions
+
+This repository includes a GitHub Actions workflow that automatically builds and pushes the Docker extension image when code is merged to the main branch.
+
+### Setup Required Secrets
+
+To enable automatic builds, you need to add the following secrets to your GitHub repository:
+
+1. Go to your repository settings → Secrets and variables → Actions
+2. Add these repository secrets:
+   - `DOCKERHUB_USERNAME`: Your Docker Hub username
+   - `DOCKERHUB_TOKEN`: Your Docker Hub access token (not your password)
+
+### How to Create a Docker Hub Access Token
+
+1. Log in to [Docker Hub](https://hub.docker.com/)
+2. Go to Account Settings → Security
+3. Click "New Access Token"
+4. Give it a name (e.g., "GitHub Actions")
+5. Copy the token and save it as the `DOCKERHUB_TOKEN` secret
+
+### Workflow Behavior
+
+- **On Pull Requests**: Builds the image but doesn't push (for testing)
+- **On Main Branch Push**: Builds and pushes the image with appropriate tags
+- **Multi-platform**: Builds for both `linux/amd64` and `linux/arm64`
+- **Caching**: Uses GitHub Actions cache for faster builds
+
+### Manual Build Commands
+
+You can still build manually using the Makefile:
+
+```shell
+make build-extension    # Build the extension
+make install-extension  # Install the extension
+make push-extension     # Push to Docker Hub
+```
+
 ## What's next?
 
 - To learn more about how to build your extension refer to the Extension SDK docs at https://docs.docker.com/desktop/extensions-sdk/.
