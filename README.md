@@ -165,9 +165,26 @@ To remove the extension:
 docker extension rm fcmenezes87/mongodb-atlas-local-extension:latest
 ```
 
+### Release Process
+
+When creating a release:
+
+1. **Create Git Tag**: Create and push a new tag (e.g., "v1.1.0")
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+2. **Automatic Process**: The workflow automatically:
+   - Creates GitHub release with auto-generated notes
+   - Extracts version from the tag
+   - Extracts release notes from GitHub release
+   - Builds and pushes Docker image with changelog
+   - Pushes to Docker Hub
+
+
 ## CI/CD with GitHub Actions
 
-This repository includes a GitHub Actions workflow that automatically builds and pushes the Docker extension image when code is merged to the main branch.
+This repository includes a GitHub Actions workflow for on-demand releases. The workflow builds and pushes the Docker extension image when manually triggered.
 
 ### Setup Required Secrets
 
@@ -188,8 +205,9 @@ To enable automatic builds, you need to add the following secrets to your GitHub
 
 ### Workflow Behavior
 
-- **On Pull Requests**: Builds the image but doesn't push (for testing)
-- **On Main Branch Push**: Builds and pushes the image with appropriate tags
+- **Tag Trigger**: Workflow automatically triggers when a new tag is pushed (e.g., v1.1.0)
+- **Version Extraction**: Automatically extracts version from the git tag
+- **Release Notes**: Extracts changelog from the GitHub release and uses as Docker build argument
 - **Multi-platform**: Builds for both `linux/amd64` and `linux/arm64`
 - **Caching**: Uses GitHub Actions cache for faster builds
 
