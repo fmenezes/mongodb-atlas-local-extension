@@ -31,6 +31,8 @@ jobs:
           echo "Extracted version: $version"
 
       - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Create release with auto-generated notes if it doesn't exist
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
@@ -46,6 +48,8 @@ jobs:
 
       - name: Extract Release Notes
         id: release_notes
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Extract release notes from the GitHub release
           release_notes=$(gh release view "$GITHUB_REF_NAME" --json body --jq .body 2>/dev/null || echo "Release ${{ steps.version.outputs.version }}")
