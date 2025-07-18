@@ -60,6 +60,16 @@ To build the extension, use `make build-extension` **or**:
 docker buildx build -t fcmenezes87/mongodb-atlas-local-extension:latest . --load
 ```
 
+For local development builds, you can specify a custom release version:
+
+```bash
+# Build with custom release version
+make build-extension RELEASE_VERSION="dev"
+
+# Or use docker build directly
+docker build --build-arg RELEASE_VERSION="dev" -t my-extension .
+```
+
 To install the extension, use `make install-extension` **or**:
 
 ```shell
@@ -177,8 +187,7 @@ When creating a release:
 2. **Automatic Process**: The workflow automatically:
    - Creates GitHub release with auto-generated notes
    - Extracts version from the tag
-   - Extracts release notes from GitHub release
-   - Builds and pushes Docker image with changelog
+   - Builds and pushes Docker image with changelog link
    - Pushes to Docker Hub
 
 
@@ -207,7 +216,6 @@ To enable automatic builds, you need to add the following secrets to your GitHub
 
 - **Tag Trigger**: Workflow automatically triggers when a new tag is pushed (e.g., v1.1.0)
 - **Version Extraction**: Automatically extracts version from the git tag
-- **Release Notes**: Extracts changelog from the GitHub release and uses as Docker build argument
 - **Multi-platform**: Builds for both `linux/amd64` and `linux/arm64`
 - **Caching**: Uses GitHub Actions cache for faster builds
 

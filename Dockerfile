@@ -11,8 +11,8 @@ COPY ui /ui
 RUN npm run build
 
 FROM alpine
-# Build argument for changelog
-ARG CHANGELOG="Initial release."
+# Build argument for release version
+ARG RELEASE_VERSION="latest"
 LABEL org.opencontainers.image.title="MongoDB Atlas Local" \
     org.opencontainers.image.description="Manage MongoDB Atlas Local containers with connection strings, authentication, and easy container launching" \
     org.opencontainers.image.vendor="Filipe C. Menezes" \
@@ -22,7 +22,7 @@ LABEL org.opencontainers.image.title="MongoDB Atlas Local" \
     com.docker.extension.detailed-description="A comprehensive Docker extension for managing MongoDB Atlas Local containers. Features include automatic connection string generation with authentication support, container filtering, status monitoring, and one-click container launching with optional credential configuration." \
     com.docker.extension.publisher-url="https://github.com/fmenezes/mongodb-atlas-local-extension" \
     com.docker.extension.categories="database" \
-    com.docker.extension.changelog="$CHANGELOG"
+    com.docker.extension.changelog="See full <a href=\"https://github.com/fmenezes/mongodb-atlas-local-extension/releases/${RELEASE_VERSION}\">change log</a>."
 
 COPY metadata.json .
 COPY mongodb.svg .

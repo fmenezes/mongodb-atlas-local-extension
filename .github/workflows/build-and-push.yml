@@ -22,41 +22,19 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for changelog generation
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          # Extract version from tag (remove 'v' prefix)
-          version=${GITHUB_REF#refs/tags/v}
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "Extracted version: $version"
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Create release with auto-generated notes if it doesn't exist
-          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "Creating GitHub release for $GITHUB_REF_NAME"
-            gh release create "$GITHUB_REF_NAME" \
-              --title "Release ${{ steps.version.outputs.version }}" \
-              --notes-start-tag "$GITHUB_REF_NAME" \
-              --generate-notes \
-              --repo "${{ github.repository }}"
+          if ! gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            echo "Creating GitHub release for ${{ github.ref_name }}"
+            gh release create "${{ github.ref_name }}" \
+              --title "Release ${{ github.ref_name }}" \
+              --generate-notes
           else
-            echo "GitHub release already exists for $GITHUB_REF_NAME"
+            echo "GitHub release already exists for ${{ github.ref_name }}"
           fi
-
-      - name: Extract Release Notes
-        id: release_notes
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Extract release notes from the GitHub release
-          release_notes=$(gh release view "$GITHUB_REF_NAME" --json body --jq .body 2>/dev/null || echo "Release ${{ steps.version.outputs.version }}")
-          echo "changelog_text<<EOF" >> $GITHUB_OUTPUT
-          echo "$release_notes" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "Extracted changelog from release notes"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -75,7 +53,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
-            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ github.ref_name }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
@@ -88,7 +66,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            CHANGELOG=${{ steps.release_notes.outputs.changelog_text }}
+            RELEASE_VERSION=tags/${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
