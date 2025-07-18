@@ -64,10 +64,10 @@ For local development builds, you can specify a custom release version:
 
 ```bash
 # Build with custom release version
-make build-extension RELEASE_VERSION="dev"
+make build-extension
 
 # Or use docker build directly
-docker build --build-arg RELEASE_VERSION="dev" -t my-extension .
+docker build -t my-extension .
 ```
 
 To install the extension, use `make install-extension` **or**:
