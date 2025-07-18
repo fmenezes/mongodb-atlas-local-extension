@@ -1,15 +1,19 @@
 # MongoDB Atlas Local Container Manager Extension
 
-This Docker extension provides a comprehensive view of your MongoDB Atlas Local containers with filtering capabilities.
+This Docker extension provides a comprehensive management interface for your MongoDB Atlas Local containers with advanced filtering, launching, and monitoring capabilities.
 
 ## Features
 
 - **Container Listing**: View MongoDB Atlas Local containers with the label `mongodb-atlas-local=container`
-- **Real-time Search**: Filter containers by name or image
-- **MongoDB Connection Strings**: Automatically generated connection strings for easy database access with copy-to-clipboard functionality
-- **Status Indicators**: Visual status chips showing container state (running, stopped, etc.)
-- **Refresh Capability**: Manual refresh button to update container list
-- **Modern UI**: Built with Material-UI components following Docker's design guidelines
+- **Container Launching**: Launch new MongoDB Atlas Local containers with configuration options
+- **Authentication Support**: Optional username/password configuration for new containers
+- **Custom Port Assignment**: Specify custom ports or use auto-assignment
+- **MongoDB Connection Strings**: Automatically generated connection strings with copy-to-clipboard functionality
+
+## Prerequisites
+
+- Docker Desktop installed and running
+- Docker Extension API enabled
 
 ## Container Information Displayed
 
@@ -18,9 +22,25 @@ The extension shows the following information for each MongoDB Atlas Local conta
 - **Container Name**: The name of the container (without the leading slash)
 - **Status**: Current container status with color-coded chips
 - **Image**: The Docker image used by the container
-- **Connection String**: MongoDB connection string in the format `mongodb://localhost:<public_port>/test?directConnection=true` or with authentication `mongodb://username:password@localhost:<public_port>/test?directConnection=true&authSource=admin`
+- **Connection String**: MongoDB connection string with copy-to-clipboard functionality
+  - Format: `mongodb://localhost:<public_port>/test?directConnection=true`
+  - With authentication: `mongodb://username:password@localhost:<public_port>/test?directConnection=true&authSource=admin`
 
 ## Installation
+
+This extension helps you manage MongoDB Atlas Local containers by providing:
+- Real-time container monitoring with auto-refresh
+- Easy connection string generation and copying
+- Container launching with authentication and port configuration
+- Automatic filtering of MongoDB Atlas Local containers
+
+### Quick Install
+
+```shell
+docker extension install fcmenezes87/mongodb_atlas_local_extension:latest
+```
+
+### Manual Build
 
 To build the extension, use `make build-extension` **or**:
 
@@ -40,9 +60,10 @@ docker extension install fcmenezes87/mongodb_atlas_local_extension:latest
 
 1. Open Docker Desktop
 2. Navigate to the "Mongodb Atlas Local" tab in the left sidebar
-3. The extension will automatically load and display MongoDB Atlas Local containers with the label `mongodb-atlas-local=container`
+3. The extension automatically displays MongoDB Atlas Local containers
 4. Use the search field to filter containers by name or image
-5. Click the "Refresh" button to update the container list
+5. Click "Launch New Container" to create new MongoDB Atlas Local instances
+6. Copy connection strings with the copy button for easy database access
 
 ### Container Filtering
 
@@ -52,6 +73,19 @@ docker ps -f label=mongodb-atlas-local=container
 ```
 
 This ensures you only see MongoDB Atlas Local containers that are part of your setup.
+
+### Container Launching
+
+Click "Launch New Container" to open the configuration dialog where you can:
+
+- **Container Name**: Set an optional custom name (auto-generated if left empty)
+- **Custom Port**: Specify a port number (1-65535) or leave empty for auto-assignment
+- **Authentication**: Choose between authentication or no authentication
+  - **Use Authentication**: Requires username and password
+  - **Skip Authentication**: Runs without authentication (not recommended)
+- **Launch**: Create the container with your configuration
+
+The container will be automatically labeled with `mongodb-atlas-local=container` and appear in your container list.
 
 ## Development
 
@@ -95,6 +129,23 @@ import { createDockerDesktopClient } from '@docker/extension-api-client';
 const client = createDockerDesktopClient();
 const containers = await client.docker.listContainers({ all: true });
 ```
+
+## Troubleshooting
+
+### No containers showing
+- Ensure your MongoDB Atlas Local containers have the label `mongodb-atlas-local=container`
+- Check that containers are running with `docker ps`
+- Verify the extension is properly installed and enabled
+
+### Connection string issues
+- Verify the container has exposed ports
+- Check that the container is running and healthy
+- Ensure the container is accessible from your host machine
+
+### Container launch failures
+- Check that Docker has sufficient resources
+- Verify the specified port is not already in use
+- Ensure you have proper permissions to create containers
 
 ## Clean up
 

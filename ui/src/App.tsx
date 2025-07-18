@@ -24,9 +24,13 @@ import {
   InputLabel,
   OutlinedInput,
   InputAdornment,
-  IconButton
+  IconButton,
+  Snackbar,
+  RadioGroup,
+  FormControlLabel,
+  Radio
 } from '@mui/material';
-import { Refresh as RefreshIcon, ContentCopy as CopyIcon, PlayArrow as PlayIcon, Visibility, VisibilityOff } from '@mui/icons-material';
+import { ContentCopy as CopyIcon, PlayArrow as PlayIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 
 // Note: This line relies on Docker Desktop's presence as a host application.
 // If you're running this React app in a browser, it won't work properly.
@@ -78,6 +82,16 @@ export function App() {
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [containerName, setContainerName] = React.useState('');
+  const [customPort, setCustomPort] = React.useState('');
+  const [authChoice, setAuthChoice] = React.useState<'auth' | 'skip'>('auth');
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [toastSeverity, setToastSeverity] = React.useState<'success' | 'error'>('success');
+  const [validationErrors, setValidationErrors] = React.useState<{
+    username?: string;
+    password?: string;
+    port?: string;
+  }>({});
   const ddClient = useDockerDesktopClient();
 
   const generateMongoDBConnectionString = async (container: Container): Promise<string | undefined> => {
@@ -184,6 +198,14 @@ export function App() {
 
   React.useEffect(() => {
     fetchContainers();
+    
+    // Set up auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchContainers();
+    }, 10000);
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -196,9 +218,12 @@ export function App() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      // You could add a toast notification here if desired
+      setToastSeverity('success');
+      setToastMessage('Connection string copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
+      setToastSeverity('error');
+      setToastMessage('Failed to copy connection string to clipboard');
     }
   };
 
@@ -206,19 +231,36 @@ export function App() {
     setShowLaunchDialog(true);
   };
 
-  const handleLaunchContainer = async (skipAuth: boolean = false) => {
+  const handleLaunchContainer = async () => {
+    // Validate form before launching
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
       const runArgs = [
-        '-d',
-        '-P',
-        '--label', 'mongodb-atlas-local=container'
+        '-d'
       ];
 
-      // Add environment variables if credentials are provided and not skipping auth
-      if (!skipAuth) {
+      // Add container name if provided
+      if (containerName.trim()) {
+        runArgs.push('--name', containerName.trim());
+      }
+
+      // Add port configuration
+      if (customPort.trim()) {
+        // Use custom port mapping
+        runArgs.push('-p', `${customPort.trim()}:27017`);
+      } else {
+        // Use default -P (publish all ports)
+        runArgs.push('-P');
+      }
+
+      // Add environment variables if authentication is chosen and credentials are provided
+      if (authChoice === 'auth') {
         if (username.trim()) {
           runArgs.push('-e', `MONGODB_INITDB_ROOT_USERNAME=${username.trim()}`);
         }
@@ -234,6 +276,10 @@ export function App() {
       // Reset form and close dialog
       setUsername('');
       setPassword('');
+      setContainerName('');
+      setCustomPort('');
+      setAuthChoice('auth');
+      setValidationErrors({});
       setShowLaunchDialog(false);
       
       // Refresh the container list after launching
@@ -245,9 +291,38 @@ export function App() {
     }
   };
 
+  const validateForm = () => {
+    const errors: { username?: string; password?: string; port?: string } = {};
+
+    // Validate authentication fields
+    if (authChoice === 'auth') {
+      if (!username.trim()) {
+        errors.username = 'Username is required when authentication is enabled';
+      }
+      if (!password.trim()) {
+        errors.password = 'Password is required when authentication is enabled';
+      }
+    }
+
+    // Validate port
+    if (customPort.trim()) {
+      const portNum = parseInt(customPort.trim());
+      if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+        errors.port = 'Port must be a number between 1 and 65535';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCancelLaunch = () => {
     setUsername('');
     setPassword('');
+    setContainerName('');
+    setCustomPort('');
+    setAuthChoice('auth');
+    setValidationErrors({});
     setShowLaunchDialog(false);
   };
 
@@ -259,7 +334,6 @@ export function App() {
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         View and filter your MongoDB Atlas Local containers. 
-        Only containers with the label "mongodb-atlas-local=container" are displayed.
       </Typography>
 
       {error && (
@@ -277,14 +351,7 @@ export function App() {
           sx={{ flexGrow: 1 }}
           size="small"
         />
-        <Button
-          variant="contained"
-          onClick={fetchContainers}
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-        >
-          Refresh
-        </Button>
+
         <Button
           variant="contained"
           color="success"
@@ -350,7 +417,6 @@ export function App() {
                             sx={{ 
                               px: 1,
                               py: 0.5,
-                              borderRadius: 1,
                               display: 'inline-block',
                               flexGrow: 1,
                               color: (!container.connectionString) ? 'error.main' : null
@@ -362,14 +428,14 @@ export function App() {
                             <Button
                               size="small"
                               variant="outlined"
-                              onClick={() => container.connectionString && copyToClipboard(container.connectionString)}
+                              onClick={() => copyToClipboard(container.connectionString!)}
                               sx={{ 
                                 minWidth: 'auto',
                                 px: 1,
                                 py: 0.5,
                               }}
                             >
-                              <CopyIcon sx={{ fontSize: '1rem' }} />
+                              <CopyIcon />
                             </Button>
                           )}
                         </>
@@ -396,32 +462,82 @@ export function App() {
           </Typography>
           <Stack spacing={3}>
             <TextField
-              label="MongoDB Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Leave empty for no authentication"
+              label="Container Name (Optional)"
+              value={containerName}
+              onChange={(e) => setContainerName(e.target.value)}
+              placeholder="Leave empty for auto-generated name"
               fullWidth
             />
-            <FormControl fullWidth>
-              <InputLabel>MongoDB Password</InputLabel>
-              <OutlinedInput
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave empty for no authentication"
-                endAdornment={
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                }
-                label="MongoDB Password"
-              />
+            <TextField
+              label="Custom Port (Optional)"
+              value={customPort}
+              onChange={(e) => setCustomPort(e.target.value)}
+              placeholder="e.g., 27017 (leave empty for auto-assigned port)"
+              fullWidth
+              error={!!validationErrors.port}
+              helperText={validationErrors.port || "MongoDB's default port is 27017"}
+            />
+            
+            <FormControl component="fieldset">
+              <Typography variant="subtitle2" gutterBottom>
+                Authentication
+              </Typography>
+              <RadioGroup
+                value={authChoice}
+                onChange={(e) => setAuthChoice(e.target.value as 'auth' | 'skip')}
+              >
+                <FormControlLabel 
+                  value="auth" 
+                  control={<Radio />} 
+                  label="Use Authentication (Recommended)" 
+                />
+                <FormControlLabel 
+                  value="skip" 
+                  control={<Radio />} 
+                  label="Skip Authentication (Not Recommended)" 
+                />
+              </RadioGroup>
             </FormControl>
+
+            {authChoice === 'auth' && (
+              <>
+                <TextField
+                  label="MongoDB Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username for authentication"
+                  fullWidth
+                  required
+                  error={!!validationErrors.username}
+                  helperText={validationErrors.username}
+                />
+                <FormControl fullWidth error={!!validationErrors.password}>
+                  <InputLabel>MongoDB Password *</InputLabel>
+                  <OutlinedInput
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password for authentication"
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                    label="MongoDB Password *"
+                  />
+                  {validationErrors.password && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                      {validationErrors.password}
+                    </Typography>
+                  )}
+                </FormControl>
+              </>
+            )}
 
           </Stack>
         </DialogContent>
@@ -430,15 +546,7 @@ export function App() {
             Cancel
           </Button>
           <Button 
-            onClick={() => handleLaunchContainer(true)} 
-            variant="outlined"
-            color="warning"
-            disabled={loading}
-          >
-            Skip Auth (Not Recommended)
-          </Button>
-          <Button 
-            onClick={() => handleLaunchContainer(false)} 
+            onClick={handleLaunchContainer} 
             variant="contained" 
             color="success"
             disabled={loading}
@@ -448,6 +556,22 @@ export function App() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={!!toastMessage}
+        autoHideDuration={4000}
+        onClose={() => setToastMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setToastMessage(null)} 
+          severity={toastSeverity}
+          sx={{ width: '100%' }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
