@@ -68,7 +68,7 @@ interface ContainerTableRow {
   id: string;
   name: string;
   status: string;
-  image: string;
+  version: string;
   connectionString?: string;
   isLoadingConnectionString?: boolean;
 }
@@ -93,6 +93,22 @@ export function App() {
     port?: string;
   }>({});
   const ddClient = useDockerDesktopClient();
+
+  const extractVersionFromImage = async (container: Container): Promise<string> => {
+    try {
+      // Inspect the container to get image information
+      const inspectResult = await ddClient.docker.cli.exec('inspect', [container.Id]);
+      const containerData = JSON.parse(inspectResult.stdout);
+      const imageLabels = containerData[0]?.Config?.Labels || {};
+      
+      const version = imageLabels['version'] || 'Unknown';
+      
+      return version;
+    } catch (err) {
+      console.error('Failed to extract version from image:', err);
+      return 'Unknown';
+    }
+  };
 
   const generateMongoDBConnectionString = async (container: Container): Promise<string | undefined> => {
     // Check if container has exposed ports
@@ -149,27 +165,19 @@ export function App() {
         })
       }) as Container[];
       
-      // First, create containers with loading state
-      const initialContainers: ContainerTableRow[] = containersData.map((container: Container) => ({
-        id: container.Id,
-        name: container.Names[0]?.replace('/', '') || container.Id.substring(0, 12),
-        status: container.Status,
-        image: container.Image,
-        isLoadingConnectionString: true
-      }));
-      
-      setContainers(initialContainers);
-      
-      // Then, generate connection strings for each container
+      // Process containers to get version and connection string information
       const processedContainers: ContainerTableRow[] = await Promise.all(
         containersData.map(async (container: Container) => {
-          const connectionString = await generateMongoDBConnectionString(container);
+          const [version, connectionString] = await Promise.all([
+            extractVersionFromImage(container),
+            generateMongoDBConnectionString(container)
+          ]);
           
           return {
             id: container.Id,
             name: container.Names[0]?.replace('/', '') || container.Id.substring(0, 12),
             status: container.Status,
-            image: container.Image,
+            version,
             connectionString,
             isLoadingConnectionString: false
           };
@@ -192,7 +200,7 @@ export function App() {
     const criteria = filterCriteria.toLowerCase();
     return containers.filter(container => 
       container.name.toLowerCase().includes(criteria) ||
-      container.image.toLowerCase().includes(criteria)
+      container.version.toLowerCase().includes(criteria)
     );
   }, [containers, filterCriteria]);
 
@@ -345,7 +353,7 @@ export function App() {
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <TextField
           label="Filter MongoDB Atlas Local containers"
-          placeholder="Filter by container name or image..."
+          placeholder="Filter by container name or version..."
           value={filterCriteria}
           onChange={(e) => setFilterCriteria(e.target.value)}
           sx={{ flexGrow: 1 }}
@@ -369,7 +377,7 @@ export function App() {
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold' }}>Container Name</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Image</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Version</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Connection String</TableCell>
             </TableRow>
           </TableHead>
@@ -403,7 +411,7 @@ export function App() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
-                      {container.image}
+                      {container.version}
                     </Typography>
                   </TableCell>
                   <TableCell>
