@@ -20,7 +20,7 @@ LABEL org.opencontainers.image.title="MongoDB Atlas Local" \
     com.docker.extension.detailed-description="A comprehensive Docker extension for managing MongoDB Atlas Local containers. Features include automatic connection string generation with authentication support, container filtering, status monitoring, and one-click container launching with optional credential configuration." \
     com.docker.extension.publisher-url="https://github.com/fmenezes/mongodb-atlas-local-extension" \
     com.docker.extension.categories="database" \
-    com.docker.extension.changelog="Visit the [GitHub repository](https://github.com/fmenezes/mongodb-atlas-local-extension) for the latest updates and release notes."
+    com.docker.extension.changelog="Initial release."
 
 COPY metadata.json .
 COPY mongodb.svg .
