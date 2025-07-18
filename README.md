@@ -37,7 +37,7 @@ This extension helps you manage MongoDB Atlas Local containers by providing:
 ### Quick Install
 
 ```shell
-docker extension install fcmenezes87/mongodb_atlas_local_extension:latest
+docker extension install fcmenezes87/mongodb-atlas-local-extension:latest
 ```
 
 ### Manual Build
@@ -45,13 +45,13 @@ docker extension install fcmenezes87/mongodb_atlas_local_extension:latest
 To build the extension, use `make build-extension` **or**:
 
 ```shell
-docker buildx build -t fcmenezes87/mongodb_atlas_local_extension:latest . --load
+docker buildx build -t fcmenezes87/mongodb-atlas-local-extension:latest . --load
 ```
 
 To install the extension, use `make install-extension` **or**:
 
 ```shell
-docker extension install fcmenezes87/mongodb_atlas_local_extension:latest
+docker extension install fcmenezes87/mongodb-atlas-local-extension:latest
 ```
 
 > If you want to automate this command, use the `-f` or `--force` flag to accept the warning message.
@@ -108,13 +108,13 @@ This starts a development server that listens on port `3000`.
 You can now tell Docker Desktop to use this as the frontend source:
 
 ```shell
-docker extension dev ui-source fcmenezes87/mongodb_atlas_local_extension:latest http://localhost:3000
+docker extension dev ui-source fcmenezes87/mongodb-atlas-local-extension:latest http://localhost:3000
 ```
 
 To open Chrome Dev Tools for debugging:
 
 ```shell
-docker extension dev debug fcmenezes87/mongodb_atlas_local_extension:latest
+docker extension dev debug fcmenezes87/mongodb-atlas-local-extension:latest
 ```
 
 
@@ -152,7 +152,7 @@ const containers = await client.docker.listContainers({ all: true });
 To remove the extension:
 
 ```shell
-docker extension rm fcmenezes87/mongodb_atlas_local_extension:latest
+docker extension rm fcmenezes87/mongodb-atlas-local-extension:latest
 ```
 
 ## CI/CD with GitHub Actions

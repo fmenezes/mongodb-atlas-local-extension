@@ -1,4 +1,4 @@
-IMAGE?=fcmenezes87/mongodb_atlas_local_extension
+IMAGE?=fcmenezes87/mongodb-atlas-local-extension
 TAG?=latest
 
 BUILDER=buildx-multi-arch
