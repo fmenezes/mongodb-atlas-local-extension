@@ -10,6 +10,18 @@ This Docker extension provides a comprehensive management interface for your Mon
 - **Custom Port Assignment**: Specify custom ports or use auto-assignment
 - **MongoDB Connection Strings**: Automatically generated connection strings with copy-to-clipboard functionality
 
+## Screenshots
+
+### Main Interface
+![Main Interface](screenshots/main.png)
+
+The main interface shows all your MongoDB Atlas Local containers with their status, connection strings, and management options.
+
+### Container Launch Dialog
+![Launch Dialog](screenshots/launch-dialog.png)
+
+The launch dialog allows you to configure new MongoDB Atlas Local containers with authentication and custom port settings.
+
 ## Prerequisites
 
 - Docker Desktop installed and running
@@ -84,8 +96,6 @@ Click "Launch New Container" to open the configuration dialog where you can:
   - **Use Authentication**: Requires username and password
   - **Skip Authentication**: Runs without authentication (not recommended)
 - **Launch**: Create the container with your configuration
-
-The container will be automatically labeled with `mongodb-atlas-local=container` and appear in your container list.
 
 ## Development
 
