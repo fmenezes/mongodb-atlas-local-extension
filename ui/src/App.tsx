@@ -31,49 +31,11 @@ import {
   Radio
 } from '@mui/material';
 import { ContentCopy as CopyIcon, PlayArrow as PlayIcon, Visibility, VisibilityOff } from '@mui/icons-material';
-
-// Note: This line relies on Docker Desktop's presence as a host application.
-// If you're running this React app in a browser, it won't work properly.
-const client = createDockerDesktopClient();
-
-function useDockerDesktopClient() {
-  return client;
-}
-
-interface Container {
-  Id: string;
-  Names: string[];
-  Image: string;
-  ImageID: string;
-  Command: string;
-  Created: number;
-  State: string;
-  Status: string;
-  Ports: Array<{
-    IP?: string;
-    PrivatePort: number;
-    PublicPort?: number;
-    Type: string;
-  }>;
-  Labels: Record<string, string>;
-  NetworkSettings: {
-    Networks: Record<string, {
-      IPAddress: string;
-      Gateway: string;
-    }>;
-  };
-}
-
-interface ContainerTableRow {
-  id: string;
-  name: string;
-  status: string;
-  version: string;
-  connectionString?: string;
-  isLoadingConnectionString?: boolean;
-}
+import { ContainerService, ContainerTableRow, LaunchContainerOptions } from './lib';
 
 export function App() {
+  const ddClient = createDockerDesktopClient();
+  const containerService = new ContainerService(ddClient);
   const [containers, setContainers] = React.useState<ContainerTableRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -92,99 +54,14 @@ export function App() {
     password?: string;
     port?: string;
   }>({});
-  const ddClient = useDockerDesktopClient();
-
-  const extractVersionFromImage = async (container: Container): Promise<string> => {
-    try {
-      // Inspect the container to get image information
-      const inspectResult = await ddClient.docker.cli.exec('inspect', [container.Id]);
-      const containerData = JSON.parse(inspectResult.stdout);
-      const imageLabels = containerData[0]?.Config?.Labels || {};
-      
-      const version = imageLabels['version'] || 'Unknown';
-      
-      return version;
-    } catch (err) {
-      console.error('Failed to extract version from image:', err);
-      return 'Unknown';
-    }
-  };
-
-  const generateMongoDBConnectionString = async (container: Container): Promise<string | undefined> => {
-    // Check if container has exposed ports
-    if (container.Ports && container.Ports.length > 0) {
-      const port = container.Ports[0];
-      if (port.PublicPort) {
-        try {
-          // Inspect the container to get environment variables using CLI
-          const inspectResult = await ddClient.docker.cli.exec('inspect', [container.Id]);
-          const containerData = JSON.parse(inspectResult.stdout);
-          const envVars = containerData[0]?.Config?.Env || [];
-          
-          // Extract username, password, and database from environment variables
-          let username = '';
-          let password = '';
-          let database = 'test'; // default database name
-          
-          for (const envVar of envVars) {
-            if (envVar.startsWith('MONGODB_INITDB_ROOT_USERNAME=')) {
-              username = envVar.split('=')[1];
-            } else if (envVar.startsWith('MONGODB_INITDB_ROOT_PASSWORD=')) {
-              password = envVar.split('=')[1];
-            } else if (envVar.startsWith('MONGODB_INITDB_DATABASE=')) {
-              database = envVar.split('=')[1];
-            }
-          }
-          
-          // Build connection string with authentication if credentials are available
-          if (username && password) {
-            return `mongodb://${username}:${password}@localhost:${port.PublicPort}/${database}?directConnection=true&authSource=admin`;
-          } else {
-            return `mongodb://localhost:${port.PublicPort}/${database}?directConnection=true`;
-          }
-        } catch (err) {
-          console.error('Failed to inspect container:', err);
-          // Fallback to connection string without authentication
-          return `mongodb://localhost:${port.PublicPort}/test?directConnection=true`;
-        }
-      }
-    }
-    
-    return undefined;
-  };
 
   const fetchContainers = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const containersData = await ddClient.docker.listContainers({ 
-        all: true,
-        filters: JSON.stringify({
-          label: ['mongodb-atlas-local=container']
-        })
-      }) as Container[];
-      
-      // Process containers to get version and connection string information
-      const processedContainers: ContainerTableRow[] = await Promise.all(
-        containersData.map(async (container: Container) => {
-          const [version, connectionString] = await Promise.all([
-            extractVersionFromImage(container),
-            generateMongoDBConnectionString(container)
-          ]);
-          
-          return {
-            id: container.Id,
-            name: container.Names[0]?.replace('/', '') || container.Id.substring(0, 12),
-            status: container.Status,
-            version,
-            connectionString,
-            isLoadingConnectionString: false
-          };
-        })
-      );
-      
-      setContainers(processedContainers);
+      const containersData = await containerService.fetchContainers();
+      setContainers(containersData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch containers');
     } finally {
@@ -193,15 +70,7 @@ export function App() {
   };
 
   const filteredContainers = React.useMemo(() => {
-    if (!filterCriteria.trim()) {
-      return containers;
-    }
-    
-    const criteria = filterCriteria.toLowerCase();
-    return containers.filter(container => 
-      container.name.toLowerCase().includes(criteria) ||
-      container.version.toLowerCase().includes(criteria)
-    );
+    return containerService.filterContainers(containers, filterCriteria);
   }, [containers, filterCriteria]);
 
   React.useEffect(() => {
@@ -216,22 +85,14 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusColor = (status: string) => {
-    if (status.includes('Up')) return 'success';
-    if (status.includes('Exited')) return 'error';
-    if (status.includes('Created')) return 'warning';
-    return 'default';
-  };
-
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await containerService.copyToClipboard(text);
       setToastSeverity('success');
       setToastMessage('Connection string copied to clipboard!');
     } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
       setToastSeverity('error');
-      setToastMessage('Failed to copy connection string to clipboard');
+      setToastMessage(err instanceof Error ? err.message : 'Failed to copy connection string to clipboard');
     }
   };
 
@@ -240,8 +101,18 @@ export function App() {
   };
 
   const handleLaunchContainer = async () => {
+    const options: LaunchContainerOptions = {
+      containerName,
+      customPort,
+      authChoice,
+      username,
+      password
+    };
+
     // Validate form before launching
-    if (!validateForm()) {
+    const errors = containerService.validateLaunchForm(options);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -249,37 +120,7 @@ export function App() {
     setError(null);
     
     try {
-      const runArgs = [
-        '-d'
-      ];
-
-      // Add container name if provided
-      if (containerName.trim()) {
-        runArgs.push('--name', containerName.trim());
-      }
-
-      // Add port configuration
-      if (customPort.trim()) {
-        // Use custom port mapping
-        runArgs.push('-p', `${customPort.trim()}:27017`);
-      } else {
-        // Use default -P (publish all ports)
-        runArgs.push('-P');
-      }
-
-      // Add environment variables if authentication is chosen and credentials are provided
-      if (authChoice === 'auth') {
-        if (username.trim()) {
-          runArgs.push('-e', `MONGODB_INITDB_ROOT_USERNAME=${username.trim()}`);
-        }
-        if (password.trim()) {
-          runArgs.push('-e', `MONGODB_INITDB_ROOT_PASSWORD=${password.trim()}`);
-        }
-      }
-
-      runArgs.push('mongodb/mongodb-atlas-local');
-
-      await ddClient.docker.cli.exec('run', runArgs);
+      await containerService.launchContainer(options);
       
       // Reset form and close dialog
       setUsername('');
@@ -297,31 +138,6 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const validateForm = () => {
-    const errors: { username?: string; password?: string; port?: string } = {};
-
-    // Validate authentication fields
-    if (authChoice === 'auth') {
-      if (!username.trim()) {
-        errors.username = 'Username is required when authentication is enabled';
-      }
-      if (!password.trim()) {
-        errors.password = 'Password is required when authentication is enabled';
-      }
-    }
-
-    // Validate port
-    if (customPort.trim()) {
-      const portNum = parseInt(customPort.trim());
-      if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-        errors.port = 'Port must be a number between 1 and 65535';
-      }
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   const handleCancelLaunch = () => {
@@ -405,7 +221,7 @@ export function App() {
                   <TableCell>
                     <Chip
                       label={container.status}
-                      color={getStatusColor(container.status) as any}
+                      color={containerService.getStatusColor(container.status)}
                       size="small"
                     />
                   </TableCell>
