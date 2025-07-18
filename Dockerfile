@@ -13,15 +13,14 @@ RUN npm run build
 FROM alpine
 LABEL org.opencontainers.image.title="MongoDB Atlas Local" \
     org.opencontainers.image.description="Manage MongoDB Atlas Local containers with connection strings, authentication, and easy container launching" \
-    org.opencontainers.image.vendor="MongoDB Inc." \
+    org.opencontainers.image.vendor="Filipe C. Menezes" \
     com.docker.desktop.extension.api.version="0.4.2" \
-    com.docker.extension.screenshots="/screenshots/main.png,/screenshots/launch-dialog.png" \
-    com.docker.desktop.extension.icon="/mongodb.svg" \
+    com.docker.extension.screenshots='[{"alt":"Main Screen", "url":"https://raw.githubusercontent.com/fmenezes/mongodb-atlas-local-extension/refs/heads/main/screenshots/main.png"},{"alt":"Launch Dialog", "url":"https://raw.githubusercontent.com/fmenezes/mongodb-atlas-local-extension/refs/heads/main/screenshots/launch-dialog.png"}]' \
+    com.docker.desktop.extension.icon="https://raw.githubusercontent.com/fmenezes/mongodb-atlas-local-extension/refs/heads/main/mongodb.svg" \
     com.docker.extension.detailed-description="A comprehensive Docker extension for managing MongoDB Atlas Local containers. Features include automatic connection string generation with authentication support, container filtering, status monitoring, and one-click container launching with optional credential configuration." \
     com.docker.extension.publisher-url="https://github.com/fmenezes/mongodb-atlas-local-extension" \
-    com.docker.extension.additional-urls="" \
-    com.docker.extension.categories="" \
-    com.docker.extension.changelog=""
+    com.docker.extension.categories="database" \
+    com.docker.extension.changelog="Visit the [GitHub repository](https://github.com/fmenezes/mongodb-atlas-local-extension) for the latest updates and release notes."
 
 COPY metadata.json .
 COPY mongodb.svg .
