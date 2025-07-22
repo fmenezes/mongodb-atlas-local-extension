@@ -31,12 +31,12 @@ import {
   Radio
 } from '@mui/material';
 import { ContentCopy as CopyIcon, PlayArrow as PlayIcon, Visibility, VisibilityOff } from '@mui/icons-material';
-import { ContainerService, ContainerTableRow, LaunchContainerOptions } from './lib';
+import { ContainerService, LaunchContainerOptions, ListContainersResponseRow } from './lib';
 
 export function App() {
   const ddClient = createDockerDesktopClient();
   const containerService = new ContainerService(ddClient);
-  const [containers, setContainers] = React.useState<ContainerTableRow[]>([]);
+  const [containers, setContainers] = React.useState<ListContainersResponseRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [filterCriteria, setFilterCriteria] = React.useState('');
@@ -61,7 +61,7 @@ export function App() {
     
     try {
       const containersData = await containerService.fetchContainers();
-      setContainers(containersData);
+      setContainers(containersData || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch containers');
     } finally {
@@ -232,38 +232,32 @@ export function App() {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {container.isLoadingConnectionString ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <>
-                          <Typography 
-                            variant="body2" 
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            px: 1,
+                            py: 0.5,
+                            display: 'inline-block',
+                            flexGrow: 1,
+                            color: (!container.connectionString) ? 'error.main' : null
+                          }}
+                        >
+                          {container.connectionString || 'Warning: No port exported'}
+                        </Typography>
+                        {container.connectionString && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => copyToClipboard(container.connectionString!)}
                             sx={{ 
+                              minWidth: 'auto',
                               px: 1,
                               py: 0.5,
-                              display: 'inline-block',
-                              flexGrow: 1,
-                              color: (!container.connectionString) ? 'error.main' : null
                             }}
                           >
-                            {container.connectionString || 'Warning: No port exported'}
-                          </Typography>
-                          {container.connectionString && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => copyToClipboard(container.connectionString!)}
-                              sx={{ 
-                                minWidth: 'auto',
-                                px: 1,
-                                py: 0.5,
-                              }}
-                            >
-                              <CopyIcon />
-                            </Button>
-                          )}
-                        </>
-                      )}
+                            <CopyIcon />
+                          </Button>
+                        )}
                     </Box>
                   </TableCell>
                 </TableRow>
